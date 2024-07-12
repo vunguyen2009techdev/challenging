@@ -1,0 +1,12 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+# compiled output
+dist
+tmp
+/out-tsc
+.nx/
+
+src/**/node_modules
+src/my-app/node_modules
