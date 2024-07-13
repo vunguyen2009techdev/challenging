@@ -29,10 +29,27 @@ app.use(
 );
 
 // Routes
-app.get("/users", async (req, res) => {
+app.get("/quizzes", async (req, res) => {
   try {
-    const users = await prisma.user.findMany();
-    res.json(users);
+    const quizzes = await prisma.quiz.findMany();
+    res.json(quizzes);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/questions", async (req, res) => {
+  const { quizId } = req.query;
+  if (!quizId) {
+    return res.status(400).json({ message: "Quiz ID is required" });
+  }
+
+  try {
+    const questions = await prisma.question.findMany({
+      where: { quizId: Number(quizId) },
+      include: { options: true },
+    });
+    res.json(questions);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -72,9 +89,11 @@ app.post("/make-quiz", async (req, res) => {
         totalScore: 0,
         status: false,
       },
+      include: { user: true, quiz: true },
     });
+    // kick an socket for new user who joined
+    io.emit("user-joined", { ...statistic });
     res.json(statistic);
-    // TODO: kick an socket for new user who joined
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -150,6 +169,8 @@ app.post("/answer", async (req, res) => {
           totalScore,
         },
       });
+      // kick an socket for new user who joined
+      io.emit("user-answer", { userId, quizId, totalScore });
       res.json(data);
     } else {
       // Update existing statistic
@@ -157,6 +178,8 @@ app.post("/answer", async (req, res) => {
         where: { id: statistic.id },
         data: { status: true, totalScore },
       });
+      // kick an socket for new user who joined
+      io.emit("user-answer", { userId, quizId, totalScore });
       res.json(data);
     }
   } catch (error: any) {
